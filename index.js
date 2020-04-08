@@ -4,14 +4,16 @@ const fs = require('fs');
 
 const query = {
     "routeName": "OTC / MILLENNIUM  CAMPUS",
-    "startPlace": "MILLENNIUM A",
-    "endPlace": "MILLENNIUM C",
-    "startTime": "7:23",
-    "endTime": "8:06"
+    "pickupStop": "MILLENNIUM A",
+    "dropOffStop": "MILLENNIUM C",
+    "pickupTime": "7:23",
+    "dropOffTime": "8:06"
 }
 
 fs.readFile('data.json', (err, data) => {
+    
     if (err) throw err;
+
     let routes = JSON.parse(data);
 
     let output = [];
@@ -20,58 +22,62 @@ fs.readFile('data.json', (err, data) => {
 
     let startScheduleIndex = null;
 
-    let iterations = 0;
-
     if(route)
     {
         let schedules = route.schedules;
         
         scheduleLoop: for (let i = 0; i < schedules.length; i++) {
+
             const stops = schedules[i];
+
             let prevStopNames = [];
+
             for (let stopIndex = 0; stopIndex < stops.length; stopIndex++) {
+
                 const stop = stops[stopIndex];
 
-                // IF THE CURRENT STOP MATCHES THE START
-                if(stop.stopTime === query.startTime && stop.name === query.startPlace) {
-                    // WE HAVE FOUND THE SCHEDULE WITH THE START
+                // IF THE CURRENT STOP MATCHES THE PICKUP
+                if(stop.stopTime === query.pickupTime && stop.name === query.pickupStop) {
+                    // WE HAVE FOUND THE SCHEDULE WITH THE PICKUP
                     startScheduleIndex = i;
                 }
 
-                // IF WE HAVE FOUND THE SCHEDULE WITH THE START
+                // IF WE HAVE FOUND THE SCHEDULE WITH THE PICKUP
                 if(startScheduleIndex !== null){
 
-                    // ADD STOP NAME TO RUNNING LIST OF STOP NAMES IN SCHEDULE ROW
-                    prevStopNames.push(stop.name)
+                    // ARE WE ON THE SAME SCHEDULE AS THE PICKUP
+                    // THEN ADD CURRENT STOP NAME TO THE OUTPUT LIST
+                    if(i === startScheduleIndex) {
+                        output.push(stop.name);
+                    }
+                    // ELSE ADD THE STOP NAME TO THE LIST OF POTENTIAL STOPS TO APPEAR BEFORE THE DROPOFF STOP
+                    else 
+                    {
+                        // ADD STOP NAME TO RUNNING LIST OF STOP NAMES FOR THIS SCHEDULE ROW
+                        prevStopNames.push(stop.name)
+                    }
+                    
 
-                    // IF THE CURRENT STOP MATCHES THE END ?
-                    if(stop.stopTime === query.endTime && stop.name === query.endPlace){
+                    // IF THE CURRENT STOP MATCHES THE DROPOFF ?
+                    if(stop.stopTime === query.dropOffTime && stop.name === query.dropOffStop){
 
-                        // ARE WE ONE THE SAME SCHEDULE AS START ?
-                        // THEN JUST ADD THE END PLACE NAME AND BREAK
+                        // ARE WE ONE THE SAME SCHEDULE AS PICKUP ?
+                        // THEN JUST ADD THE DROPOFF NAME AND BREAK - DONE
                         if(i === startScheduleIndex) {
                             output.push(stop.name);
                             break scheduleLoop;
                         } 
-                        // ELSE ADD THE RUNNING LIST OF STOP NAMES AND BREAK
+                        // ELSE CONCAT THE RUNNING LIST OF STOP NAMES AND BREAK - DONE
                         else {
                             output = output.concat(prevStopNames);
                             break scheduleLoop;
                         }
                     }
-
-                    // ARE WE ON THE SAME SCHEDULE AS THE START
-                    // THEN ADD CURRENT STOP NAME TO THE OUTPUT LIST
-                    if(i === startScheduleIndex) {
-                        output.push(stop.name);
-                    }
                 }
             }
-           iterations += 1;
         }
     }
 
-    console.log(iterations);
     console.log(output);
     let outputJson = JSON.stringify(output, null, 2);
     fs.writeFile('output.json', outputJson, (err) => {
